@@ -6,6 +6,7 @@
 #include <QUrl>
 #include <QTextBrowser>
 #include "links.h"
+#include "AllNovelManager.h"
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -43,7 +44,7 @@ private:
 
     bool returnoriginal = false;
 
-    // 新增私有成员函数，用于实际发起请求
+    // 用于实际发起请求
     void fetchArticleInternal();
 };
 

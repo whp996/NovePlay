@@ -19,6 +19,9 @@ bool Player::startNovelReading(QByteArray novel)
 {
     QString novelContent = QString::fromUtf8(novel);
 
+    if(m_tts->state() != QTextToSpeech::Ready) {
+        stopNovelReading();
+    }
     m_novelSegments.clear();
     m_stop = false;
     // 按段落分割小说内容，这里使用两个换行符作为分割标记

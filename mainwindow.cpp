@@ -84,7 +84,7 @@ void MainWindow::Init(){
     version->setValue("1.3-beta");
     version->setEnabled(false);
     textInputItem *updateDate = new textInputItem("last-upd", defaultSettingsPage);
-    updateDate->setValue("2021/12/6 10:14");
+    updateDate->setValue("2025/04/12 10:14");
     updateDate->setEnabled(false);
     textInputItem *Author = new textInputItem("author", defaultSettingsPage);
     Author->setValue("Linloir | Made with love");
@@ -123,7 +123,7 @@ void MainWindow::Init(){
     QFontMetrics descFm(descFont);
     canvasDesc = new QLineEdit(this);
     canvasDesc->setFont(descFont);
-    canvasDesc->setText("Begin your encrypted call");
+    canvasDesc->setText("Login or Register to start");
     canvasDesc->setMaxLength(128);
     canvasDesc->setReadOnly(true);
     canvasDesc->setMinimumHeight(descFm.lineSpacing());
@@ -361,7 +361,7 @@ void MainWindow::deleteCanvas(MyCanvas *canvas){
         curCanvas = nullptr;
         canvasTitle->setText("START");
         canvasTitle->setMaximumWidth(QFontMetrics(QFont("Corbel Light", 24)).size(Qt::TextSingleLine, "START").width() + 10);
-        canvasDesc->setText("Add your first canvas to start");
+        canvasDesc->setText("Login or Register to start");
         curSettingsPage = defaultSettingsPage;
         curLayersPage = defaultLayersPage;
     }

@@ -209,35 +209,60 @@ void ScrollAreaCustom::scrollIndicator(int dp){
 }
 
 void ScrollAreaCustom::wheelEvent(QWheelEvent *event){
-    if(container->y() > 0 || container->y() + container->height() < this->height())
-        return;
+    // 如果内容高度不超过视口高度，直接交给父组件处理
+    if(container->height() <= this->height()){
+         QWidget::wheelEvent(event);
+         return;
+    }
+    
+    // 定义边界值，顶部为0, 底部为 this->height() - container->height()
+    int topY = 0;
+    int bottomY = this->height() - container->height();
+    
+    // 如果内容已经到顶部且用户向上滚动，则交给父组件
+    if(container->y() >= topY && event->angleDelta().y() > 0){
+         QWidget::wheelEvent(event);
+         return;
+    }
+    
+    // 如果内容已经到最底部且用户向下滚动，则交给父组件
+    if(container->y() <= bottomY && event->angleDelta().y() < 0){
+         QWidget::wheelEvent(event);
+         return;
+    }
+    
+    // 否则，内部处理滚轮事件使内容滚动
     curSpd += 5;
     bool newDirection = event->angleDelta().y() > 0;
     if(newDirection != scrollDown)
-        curSpd = 5;
+         curSpd = 5;
     if(curSpd > MAXSPEED)
-        curSpd = MAXSPEED;
+         curSpd = MAXSPEED;
     scrollDown = newDirection;
     if(!rfrshView->isActive())
-        rfrshView->start(30);
+         rfrshView->start(30);
     update();
 }
 
 ScrollListContainer::ScrollListContainer(QWidget *parent) : QWidget(parent){}
 
 void ScrollListContainer::paintEvent(QPaintEvent *event){
+
+    int maxWidth = 0;
     for(int i = 0; i < widgets.size(); i++){
+        maxWidth = qMax(maxWidth, widgets[i]->width());
         widgets[i]->resize(this->width(), widgets[i]->height());
     }
+    this->resize(maxWidth, this->height());
 }
 
 void ScrollListContainer::AddWidget(QWidget *widget, bool setAnimation){
     //Add animation for all widgets current
-    this->resize(this->width(), this->height() + widget->height() + spacing);
+    this->resize(qMax(this->width(), widget->width()), this->height() + widget->height() + spacing);
     widgets.push_back(widget);
     size++;
     ys.push_back(0);
-    widget->resize(this->width(), widget->height());
+    widget->resize(qMax(this->width(), widget->width()), widget->height());
     widget->show();
 
     if(setAnimation){

@@ -3,15 +3,27 @@
 
 #include <QObject>
 #include <QString>
+#include <QJsonObject>
 
 #define g_links Links::instance()
 
-struct Link
-{
-    QString name;
-    QString url;
-    QString category;
-    QString desc;
+// 用于描述单个小说项
+struct NovelItem {
+    QString name;          // 小说名称
+    QString author;        // 作者
+    QString type;          // 类型，例如玄幻、都市等
+    QString description;   // 小说描述
+    QString url;           // 小说链接
+
+    // 将小说项转换为 QJsonObject
+    QJsonObject toJson() const;
+
+    bool operator==(const NovelItem &other) const {
+        return name == other.name && author == other.author && type == other.type && description == other.description && url == other.url;
+    }
+
+    // 从 QJsonObject 中解析出小说项
+    static NovelItem fromJson(const QJsonObject &obj);
 };
 
 class Links : public QObject
@@ -28,16 +40,16 @@ public:
     Links(const Links&) = delete;
     Links& operator=(const Links&) = delete;
 
-    void SetFrontLink(const Link &link);
-    Link GetCurrentLink() const;
+    void SetFrontLink(const NovelItem &item);
+    NovelItem GetCurrentLink() const;
 
-    Link FrontLink{ "", "", "" };
-    Link CurrentLink{ "", "", "" };
+    NovelItem FrontLink{ "", "", "", "", "" };
+    NovelItem CurrentLink{ "", "", "", "", "" };
     QString CurrentLogin = "";
     QString ConnectName = "";
 
 public slots:
-    void SetCurrentLink(const Link &link);
+    void SetCurrentLink(const NovelItem &item);
 
 private:
     // 将构造函数设为私有

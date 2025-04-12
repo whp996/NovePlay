@@ -89,6 +89,7 @@ selectionItem::selectionItem(QString name, QString info, QWidget *parent) :
     title->setMinimumHeight(height);
     title->setStyleSheet("color:#2c2c2c");
     title->setAlignment(Qt::AlignLeft | Qt::AlignBottom);
+
     QFont descFont = QFont("Corbel Light", 11);
     fm = QFontMetrics(descFont);
     height = fm.lineSpacing();
@@ -98,11 +99,23 @@ selectionItem::selectionItem(QString name, QString info, QWidget *parent) :
     description->setMinimumHeight(height);
     description->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     description->setStyleSheet("color:#707070");
+    description->setWordWrap(false);
 
+    QScrollArea *descScrollArea = new QScrollArea(this);
+    descScrollArea->setWidget(description);
+    descScrollArea->setWidgetResizable(true);
+    descScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    descScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    descScrollArea->setFrameShape(QFrame::NoFrame);
+    descScrollArea->viewport()->setStyleSheet("background-color: #00000000");
+    int hScrollBarHeight = descScrollArea->horizontalScrollBar()->sizeHint().height();
+    descScrollArea->setFixedHeight(description->minimumHeight() + hScrollBarHeight + 2);
+    
     indicator = new QWidget(this);
 
     /* set minimum height and layout */
-    setFixedHeight(title->height() + (info == "" ? 0 : description->height() + 5));
+    setFixedHeight(title->height() + (info == "" ? 0 : descScrollArea->height() + 5));
+    
     indicator->resize(6, 0.4 * this->height());
     indicator->move(4, 0.3 * this->height());
     indicator->setStyleSheet("border-radius:3px;background-color:#0078D4");
@@ -116,7 +129,7 @@ selectionItem::selectionItem(QString name, QString info, QWidget *parent) :
     this->setLayout(contentLayout);
     contentLayout->addWidget(title);
     if(info != "")
-        contentLayout->addWidget(description);
+        contentLayout->addWidget(descScrollArea);
     contentLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
     /* set background widget */
@@ -331,6 +344,13 @@ void singleSelectGroup::updateScrollAreaHeight() {
     this->setFixedHeight(totalHeight);
 }
 
+selectionItem *singleSelectGroup::GetSelection(QString name){
+    for(int i = 0; i < selections.size(); i++){
+        if(selections[i]->name() == name)
+            return selections[i];
+    }
+    return nullptr;
+}
 //*********************************************************//
 // horizontalValueAdjuster 类实现
 //*********************************************************//
@@ -1009,6 +1029,8 @@ TransparentNavTextBrowser::TransparentNavTextBrowser(QWidget *parent)
     prevButton->raise();
     nextButton->raise();
     this->setStyleSheet("background-color: #FFFFFF;border:1px solid #cfcfcf;border-radius:10px;");
+    prevButton->setVisible(false);
+    nextButton->setVisible(false);
     // 以下为设置滚动条样式的代码（不需要修改，只需保留原有代码即可）
     verticalScrollBar()->setStyleSheet(
         "QScrollBar {"

@@ -21,13 +21,10 @@ struct Message {
             QByteArray data;
             QDataStream stream(&data, QIODevice::WriteOnly);
             
-            // 写入消息类型
             stream << static_cast<qint32>(msg.type);
 
-            // 写入时间戳
             stream << msg.timestamp;
 
-            // 写入数据
             stream << msg.data;
 
             return data;
@@ -36,15 +33,12 @@ struct Message {
             Message msg;
             QDataStream stream(data);
 
-            // 读取消息类型
             qint32 type;
             stream >> type;
             msg.type = static_cast<fileType>(type);
 
-            // 读取时间戳
             stream >> msg.timestamp;
 
-            // 读取数据
             stream >> msg.data;
 
             return msg;

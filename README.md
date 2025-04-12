@@ -1,40 +1,142 @@
-# GraphBuilder
+# 项目说明文档
 
-This is a project inspired by my Data Structure & Algorithm Course homework, it's used to create and visualize graphs both directed or undirected, and supports underlaying data structure of either adjacent list or multiple adjacent list
+## 一、项目简介
 
-## Functionalities
+本项目是一个综合性客户端应用，集成了在线聊天、小说阅读、文本转语音朗读、用户登录/注册以及收藏管理等功能。软件基于 Qt 框架开发，融合了图形化界面、网络通信（使用 WinSock2 库）和 JSON 数据管理，旨在为用户提供便捷的阅读和互动体验。
 
-- Create, save or read multiple layers (or might say multiple palettes)
-- Draw or remove nodes and edges
-- Change name, position of nodes
-- Change width, direction of edges
-- Animate BFS, DFS and Dijkstra's algorithm
-- Change animation speed
-- Change the underlaying data structure
-- Change the type of graph (directed or undirected)
-- Display the generated minimum spanning tree (by hiding unvisited items)
-- Support algorithms on forests
+## 二、软件结构
 
-## Deploy and run
+项目主要分为以下几个模块，下面对各模块所包含的功能和核心文件进行说明：
 
-If you want to use the packed executable, you can download it from the [release page](https://github.com/Linloir/GraphBuilder/releases)
+### 1. 网络通信模块
 
-If you want to view the source code and run it from QT Creator, you might need:
+- **文件：socketlearn/socketlearn.cpp & socketlearn.h**  
+  负责建立 TCP 连接、发送和接收数据。  
+  - 实现了自定义的消息格式（包括消息类型、数据长度和内容），支持消息序列化和反序列化。  
+  - 通过设置回调函数实现异步接收数据，并包含心跳应答逻辑确保连接稳定。  
+  - 在析构函数中会关闭连接并回收资源。
 
-- QT 6.1 or above
-- QT Creator installed
-- QT build kit (MSVC or MinGW) installed
+### 2. 消息与数据结构模块
 
-Armed with the above, you can clone the repository and open the project from `GraphBuilder.pro` file in QT Creator.
+- **文件：socketlearn/classlist.h**  
+  定义了消息相关的数据结构和枚举：  
+  - `Message` 结构体中包含消息类型、数据内容和时间戳，并实现了序列化与反序列化方法；  
+  - `MessageType` 与 `InstructionType` 枚举则用于区分消息类别以及指令类型（如登录、注册、删除账号、心跳应答等）。
 
-## Screenshots
+### 3. 用户界面模块
 
-![CreatePalette](screenshots/CreatePalette.gif)
+- **文件：mainwindow.cpp & mainwindow.h**  
+  作为整个应用的主窗口，主要负责：  
+  - 构建无边框、可拖拽和可缩放的窗口界面；  
+  - 切换登录、注册、关于、设置和聊天界面；  
+  - 管理窗口内多个页面（使用 SlidePage 动画效果显示页面之间的切换）；  
+  - 处理窗口边缘拖拽调整大小以及窗口最大化/恢复操作。
 
-![BFS](screenshots/BFS.gif)
+- **文件：mycanvas.cpp & mycanvas.h**  
+  定义了 `MyCanvas` 类，作为聊天和小说阅读的主要界面，包含：  
+  - **聊天管理**：内嵌在线用户列表，通过网络模块与其他客户端互动，实现消息发送和接收；  
+  - **小说阅读**：加载小说 HTML 文件，支持上一页、下一页切换；  
+  - **语音朗读**：结合播放模块对小说内容进行分段朗读；  
+  - **设置与收藏**：提供修改书源、收藏管理、语音设置及其他界面交互（如重命名、详情修改）的功能。
 
-![DFS](screenshots/DFS.gif)
+### 4. 小说数据管理模块
 
-![Dijkstra](screenshots/Dijkstra.gif)
+- **文件：AllNovelManager.cpp & AllNovelManager.h**  
+  负责管理所有小说数据：  
+  - 从 JSON 文件加载小说列表，支持添加、删除小说；  
+  - 每次修改后自动保存数据到文件中，并在操作失败时给出相应的错误提示。
 
-![ChangeType](screenshots/ChangeType.gif)
+- **文件：FavoriteManager.cpp & FavoriteManager.h**  
+  采用单例模式管理用户收藏小说：  
+  - 从 JSON 文件中读取收藏列表，支持添加新收藏或删除已存在的收藏项；  
+  - 保存收藏数据到文件中，提供错误日志信息。
+
+### 5. 小说推荐模块
+
+- **文件：NovelRecommender.cpp & NovelRecommender.h**  
+  基于用户当前收藏的小说类型统计数据：  
+  - 遍历所有未收藏的小说，并计算它们与用户收藏类型的匹配度；  
+  - 排序后输出推荐列表，保证用户获得与兴趣相关的小说推荐。
+
+### 6. 文本转语音播放模块
+
+- **文件：player.cpp & player.h**  
+  封装了 Qt 的 `QTextToSpeech` 类，实现小说朗读功能：  
+  - 将小说内容按段落（以两个换行符分割）处理，并依次朗读；  
+  - 提供了"暂停"、"继续"和"停止"功能，配合 UI 控件进行控制。
+
+## 三、各界面功能说明
+
+### 1. 登录与注册界面
+
+- **功能描述**：  
+  用户可以通过界面输入用户名和密码完成登录或者注册。  
+  - 登录成功后，程序通过网络模块与服务器建立连接，并切换到聊天及小说阅读的主界面；  
+  - 注册界面提供新用户注册，注册成功后给予提示并返回到登录界面。
+
+### 2. 聊天管理界面
+
+- **功能描述**：  
+  集成于 `MyCanvas` 中，主要功能包括：  
+  - 显示在线用户列表，允许点击选中以进行聊天；  
+  - 用户可以输入文本发送消息，消息通过网络发送至服务器；  
+  - 接收消息后会在消息展示区（`MessageDisplay`）中显示，支持左右排列区分对话双方。
+
+### 3. 小说阅读与语音朗读界面
+
+- **功能描述**：  
+  以 HTML 形式加载显示小说内容，用户可以进行：  
+  - 翻页操作（上一页、下一页）；  
+  - 控制语音播放，启动小说朗读；  
+  - 通过按钮进行暂停和继续朗读操作，使得用户可以边读边听。
+
+### 4. 收藏与推荐功能
+
+- **功能描述**：  
+  - 用户可以收藏当前小说章节，收藏项会存储在本地 JSON 文件中；  
+  - 软件根据用户历史收藏和小说类型，为用户生成符合兴趣的推荐列表，并在设置界面中展示。
+
+### 5. 设置与关于界面
+
+- **功能描述**：  
+  - 设置界面允许用户更改小说源、选择朗读语音（年龄、性别、语言）及播放速度；  
+  - 同时支持修改账号名称和详细描述；  
+  - "关于"界面显示软件版本、更新日期、作者信息和许可证信息，让用户了解软件相关信息。
+
+### 6. 窗口控制及动画效果
+
+- **功能描述**：  
+  - 主窗口支持无边框显示、拖动和边缘缩放，界面切换时有平滑动画效果；  
+  - 用户界面中内嵌了多个 `SlidePage` 页面，交互顺畅；  
+  - 窗口支持最大化和恢复，通过点击图标切换状态，并带有转动动画效果。
+
+## 四、依赖与运行环境
+
+- **开发环境**：  
+  - 使用 Qt 框架（支持 Qt5 或 Qt6）开发，界面组件使用 QtWidgets、QtCore、QtNetwork、QtTextToSpeech 等模块。  
+  - Windows 平台下使用 WinSock2 实现网络功能。
+
+- **编译要求**：  
+  - C++11/14/17 标准（根据项目配置），需安装相应的 Qt 环境及开发工具（如 Qt Creator）。
+
+## 五、编译与运行
+
+1. **环境配置**：  
+   - 克隆项目代码后，确保安装了 Qt 开发环境。  
+   - 根据需要修改 `socketlearn/socketlearn.cpp` 中的服务器 IP 地址、端口号及其它网络参数。
+
+2. **编译方式**：  
+   - 使用 Qt Creator 打开项目工程文件（.pro 或 CMakeLists.txt），然后编译实现。
+
+3. **运行程序**：  
+   - 启动程序后，将首先展示登录和注册界面，待登录成功后即可进入聊天和小说阅读主界面进行操作。
+
+## 六、注意事项
+
+- **网络设置**：确保网络参数正确，服务端可正常响应客户端请求。  
+- **数据文件**：小说数据（JSON）、收藏数据和本地 HTML 文件（如 `bqg.html`）应放在正确路径下，便于程序加载。  
+- **平台差异**：部分 UI 和网络操作在 Windows 与 Linux 平台下可能存在细微差异，建议在目标平台上仔细测试。
+
+---
+
+以上便是本项目各界面功能与软件结构的详细说明。通过合理的模块划分和清晰的交互逻辑，本软件实现了一个功能丰富、用户体验良好的在线阅读与聊天平台。

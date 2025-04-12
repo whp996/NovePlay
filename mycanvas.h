@@ -4,14 +4,16 @@
 #include <QWidget>
 #include <QGridLayout>
 #include "slidepage.h"
-#include "graph_view.h"
-#include "graph_implement.h"
 #include <QTextBrowser>
 #include "WebCrawler.h"
 #include "socketlearn.h"
 #include "links.h"
 #include <QMessageBox>
 #include "player.h"
+#include "NovelRecommender.h"
+#include "FavoriteManager.h"
+#include "AllNovelManager.h"
+#include <QMutex>
 
 #if (QT_VERSION > QT_VERSION_CHECK(6,3,0))
 #include <QFileDialog>
@@ -35,6 +37,7 @@ private:
     SlidePage *layerPage;
     singleSelectGroup *userList;
     QVBoxLayout *defTextLayout;
+    QMutex mutex;
 
     //For display
     TransparentNavTextBrowser *view;
@@ -42,12 +45,16 @@ private:
     QWidget *infoWidget;
     QLabel *pageName;
 
-    AbstractGraph *g;
     int structure_type;
     int type;
     bool generateForest = false;
     unordered_map<QString, onlineUser> userMap;
     MessageDisplay *currentMessageDisplay;
+
+    // Novel manager
+    FavoriteManager *favManager;
+    AllNovelManager *allNovelManager;
+    NovelRecommender *novelRecommender;
 
     //For player
     Player *player;
@@ -58,9 +65,6 @@ private:
     void handleReadyRead(QString message);
 
 public:
-    enum { UDG = AbstractGraph::UDG, DG = AbstractGraph::DG };
-    enum { AL = 128, AML = 256 };
-
     explicit MyCanvas(int radius, QString name = "", socketlearn *socket = nullptr, QWidget *parent = nullptr);
     ~MyCanvas(){ if(player) player->stopNovelReading();}
     QString name(){return canvasName;}

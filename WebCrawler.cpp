@@ -103,7 +103,6 @@ void WebCrawler::onFinished()
 } 
 
 void WebCrawler::fetchInfo(const QUrl &url){
-    qDebug() << "fetchInfo" << url;
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Qt WebCrawler)");
     QNetworkReply *reply = manager->get(request);
@@ -117,37 +116,34 @@ void WebCrawler::oninfoFinished(){
     QString html = QString::fromUtf8(data);
     
     // --------------------------
-    // 提取书名（假设书名在 <h1> 标签中）
+    // 提取书名（书名在 <h1> 标签中）
     QRegularExpression reTitle("<h1[^>]*>([^<]+)</h1>");
     QRegularExpressionMatch match = reTitle.match(html);
     QString bookTitle;
     if (match.hasMatch()) {
         bookTitle = match.captured(1).trimmed();
-        qDebug() << "书名:" << bookTitle;
     } else {
         qDebug() << "未匹配到书名";
     }
     
     // --------------------------
-    // 提取作者（假设格式为 "作者：<作者名>"）
+    // 提取作者（格式为 "作者：<作者名>"）
     QRegularExpression reAuthor("作者：\\s*([^<\\s]+(?:\\s+[^<\\s]+)*)");
     match = reAuthor.match(html);
     QString bookAuthor;
     if (match.hasMatch()) {
         bookAuthor = match.captured(1).trimmed();
-        qDebug() << "作者:" << bookAuthor;
     } else {
         qDebug() << "未匹配到作者";
     }
     
     // --------------------------
-    // 提取简介（假设简介紧跟在 "内容简介：" 后，直到下一个 HTML 标签）
+    // 提取简介（简介紧跟在 "内容简介：" 后，直到下一个 HTML 标签）
     QRegularExpression reSynopsis("内容简介：\\s*([\\s\\S]+?)(?:<\\/div>|<br>|<p>)");
     match = reSynopsis.match(html);
     QString bookSynopsis;
     if (match.hasMatch()) {
-        bookSynopsis = match.captured(1).trimmed();
-        qDebug() << "简介:" << bookSynopsis;
+        bookSynopsis = match.captured(1).trimmed().replace("</dt><dd>", "").replace("</dd></dl>", "");
     } else {
         qDebug() << "未匹配到简介";
     }
@@ -159,16 +155,20 @@ void WebCrawler::oninfoFinished(){
     QString bookCategory;
     if (match.hasMatch()) {
         bookCategory = match.captured(1).trimmed();
-        qDebug() << "分类:" << bookCategory;
     } else {
         qDebug() << "未匹配到分类";
     }
-    Link link;
-    link.category = bookCategory;
-    link.name = bookTitle;
-    link.url = currentUrl.toString();
-    link.desc = bookSynopsis;
-    g_links.SetCurrentLink(link);
+
+    NovelItem item;
+    item.name = bookTitle;
+    item.author = bookAuthor;
+    item.type = bookCategory;
+    item.description = bookSynopsis;
+    item.url = currentUrl.toString();
+    if(!AllNovelManager::instance()->addNovel(item)){
+        qWarning() << "添加小说失败:" << AllNovelManager::instance()->getLastError();
+    }
+    g_links.SetCurrentLink(item);
     reply->deleteLater();
 }
 

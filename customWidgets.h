@@ -119,6 +119,7 @@ public:
     void AddItem(selectionItem *item);
     void RemoveItem(selectionItem *item);
     void SetSelection(selectionItem *item);
+    selectionItem *GetSelection(QString name);
     qreal value(){return selectedID;}
 
 signals:
@@ -285,7 +286,6 @@ public:
         Right
     };
 
-    // 构造函数：传入姓名、消息内容、时间戳以及显示方向（默认左侧）
     explicit MessageItem(const QString &name, const QString &message, const QString &timestamp, Side side = Left, QWidget *parent = nullptr);
 
 protected:
@@ -303,7 +303,6 @@ class MessageDisplay : public QWidget {
 public:
     explicit MessageDisplay(QWidget *parent = nullptr);
     
-    // 添加消息项到显示区域
     void addMessage(MessageItem *item);
 
 private:

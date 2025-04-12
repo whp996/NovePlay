@@ -10,7 +10,7 @@
 #include "socketlearn.h"
 #include <thread>
 
-#pragma comment(lib, "Ws2_32.lib")  // 链接 Ws2_32.lib
+#pragma comment(lib, "Ws2_32.lib")
 
 socketlearn::socketlearn()
 {
@@ -28,8 +28,8 @@ socketlearn::socketlearn()
     }
 
     server.sin_family = AF_INET;
-    server.sin_port = htons(4567);
-    if (inet_pton(AF_INET, "8.137.18.132", &server.sin_addr) <= 0)
+    server.sin_port = htons("host port");
+    if (inet_pton(AF_INET, "host location", &server.sin_addr) <= 0)
     {
         throw std::runtime_error("invalid address/Address not suported");
         closesocket(socket_fd);

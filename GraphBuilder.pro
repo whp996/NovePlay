@@ -1,4 +1,4 @@
-QT       += core gui webenginewidgets texttospeech
+QT       += core gui texttospeech
 QT += svg
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -12,8 +12,6 @@ CONFIG += c++11
 SOURCES += \
     customScrollContainer.cpp \
     customWidgets.cpp \
-    graph_implement.cpp \
-    graph_view.cpp \
     links.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -21,14 +19,14 @@ SOURCES += \
     player.cpp \
     slidepage.cpp \
     WebCrawler.cpp \
-    socketlearn/socketlearn.cpp \
-    player.cpp
+    player.cpp \
+    NovelRecommender.cpp \
+    AllNovelManager.cpp \
+    FavoriteManager.cpp
 
 HEADERS += \
     customScrollContainer.h \
     customWidgets.h \
-    graph_implement.h \
-    graph_view.h \
     links.h \
     mainwindow.h \
     mycanvas.h \
@@ -37,7 +35,10 @@ HEADERS += \
     WebCrawler.h \
     socketlearn/socketlearn.h \
     socketlearn/classlist.h \
-    player.h
+    player.h \
+    NovelRecommender.h \
+    AllNovelManager.h \
+    FavoriteManager.h
     
 FORMS += \
     mainwindow.ui
@@ -45,8 +46,9 @@ FORMS += \
 INCLUDEPATH += \
     socketlearn
 
+LIBS += -l$$PWD/socketlearn -lsocketlearn_static
 RC_ICONS = logo.ico
-
+DEFINES += PROJECT_DIR=\\\"$$PWD\\\"
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

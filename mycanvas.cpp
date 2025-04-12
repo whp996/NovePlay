@@ -5,6 +5,11 @@ MyCanvas::MyCanvas(int radius, QString name, socketlearn* socket, QWidget *paren
     canvasName(name),
     socket(socket)
 {
+    /* init novel manager */
+    favManager = FavoriteManager::instance();
+    allNovelManager = AllNovelManager::instance();
+    novelRecommender = new NovelRecommender(this);
+
     /* create canvas */
     mainLayout = new QHBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -12,6 +17,19 @@ MyCanvas::MyCanvas(int radius, QString name, socketlearn* socket, QWidget *paren
     this->setLayout(mainLayout);
     view = new TransparentNavTextBrowser(this);
     view->setReadOnly(true);
+    connect(view->prevButton, &QPushButton::clicked, this, [=](){
+        if(g_links.FrontLink == g_links.CurrentLink) return;
+        int currentPage = g_links.CurrentLink.url.split("/").last().replace(".html", "").toInt();
+        if(currentPage == 1) {QMessageBox::warning(this, "错误", "已经是第一页了"); return;}
+        QString urlnew = g_links.CurrentLink.url.left(g_links.CurrentLink.url.lastIndexOf("/")) + "/" + QString::number(currentPage - 1) + ".html";
+        crawler->fetchArticle(QUrl(urlnew));
+    });
+    connect(view->nextButton, &QPushButton::clicked, this, [=](){
+        if(g_links.FrontLink == g_links.CurrentLink) return;
+        int currentPage = g_links.CurrentLink.url.split("/").last().replace(".html", "").toInt();
+        QString urlnew = g_links.CurrentLink.url.left(g_links.CurrentLink.url.lastIndexOf("/")) + "/" + QString::number(currentPage + 1) + ".html";
+        crawler->fetchArticle(QUrl(urlnew));
+    });
     player = Player::getInstance(nullptr);
     mainLayout->addWidget(view);
     this->setFocusPolicy(Qt::ClickFocus);
@@ -19,7 +37,7 @@ MyCanvas::MyCanvas(int radius, QString name, socketlearn* socket, QWidget *paren
     crawler = new WebCrawler(this);
     crawler->setOutputWidget(view);
     // 加载本地bqg.html文件
-    QFile localFile("bqg.html");
+    QFile localFile(QString(PROJECT_DIR) + "/bqg.html");
     if (localFile.open(QIODevice::ReadOnly)) {
         QString content = QString::fromUtf8(localFile.readAll());
         view->setHtml(content);
@@ -35,10 +53,10 @@ MyCanvas::MyCanvas(int radius, QString name, socketlearn* socket, QWidget *paren
     // 在构造函数中，关闭默认打开链接，然后连接信号
     view->setOpenLinks(false);
     connect(view, &QTextBrowser::anchorClicked, this, [=](const QUrl &url) mutable {
-        qDebug() << "anchorClicked" << url;
         QString urlnew = url.toString() + "1.html";
         crawler->fetchArticle(QUrl(urlnew));
-        qDebug() << "anchorClicked" << urlnew;
+        view->prevButton->setVisible(true);
+        view->nextButton->setVisible(true);
     });
 
     socketTimerout = new QTimer(this);
@@ -59,11 +77,22 @@ void MyCanvas::CreateSettings(int radius){
     structureSetting->SetSelection(bqg);
     connect(structureSetting, &singleSelectGroup::selectedItemChange, this, [=](int id){
         if(id == 0){
-            QFile localFile("bqg.html");
+            QFile localFile(QString(PROJECT_DIR) + "/bqg.html");
             if (localFile.open(QIODevice::ReadOnly)) {
                 QString content = QString::fromUtf8(localFile.readAll());
                 view->setHtml(content);
                 localFile.close();
+                NovelItem item;
+                item.name = "笔趣阁";
+                item.author = "笔趣阁";
+                item.type = "笔趣阁";
+                item.description = "笔趣阁";
+                item.url = "https://www.biq01.cc/";
+                g_links.SetFrontLink(item);
+                g_links.SetCurrentLink(item);
+                view->prevButton->setVisible(false);
+                view->nextButton->setVisible(false);
+                settings->slideOut();
             } else {
                 qDebug() << "无法打开本地文件 bqg.html";
             }
@@ -71,40 +100,32 @@ void MyCanvas::CreateSettings(int radius){
     });
     singleSelectGroup *dirSetting = new singleSelectGroup("推荐", this);
     connect(dirSetting, &singleSelectGroup::itemChange, this, [=](){settings->UpdateContents();});
-    selectionItem *setDG = new selectionItem("DG", "Directed graph", this);
-    selectionItem *setUDG = new selectionItem("UDG", "Undirected graph", this);
-    dirSetting->AddItem(setDG);
-    dirSetting->AddItem(setUDG);
-    dirSetting->SetSelection(type == DG ? setDG : setUDG);
-    connect(dirSetting, &singleSelectGroup::selectedItemChange, this, [=](int id){
-        // g->ConvertType(id == 0 ? AbstractGraph::DG : AbstractGraph::UDG);
-        // view->setType(id == 0 ? MyGraphicsView::DG : MyGraphicsView::UDG);
-        // type = id == 0 ? DG : UDG;
-    });
+    for(const auto &item : novelRecommender->recommendNovels(5)){
+        selectionItem *sitem = new selectionItem(item.name, item.description, this);
+        dirSetting->AddItem(sitem);
+        dirSetting->SetSelection(sitem);
+        connect(sitem, &selectionItem::selected, this, [=](){
+            crawler->fetchArticle(QUrl(item.url));
+            view->prevButton->setVisible(true);
+            view->nextButton->setVisible(true);
+            settings->slideOut();
+        });
+    }
 
     singleSelectGroup *collectSetting = new singleSelectGroup("收藏列表", this);
     connect(collectSetting, &singleSelectGroup::itemChange, this, [=](){settings->UpdateContents();});
-    QFile file(QDir::currentPath() + "/Favorite.json");
-    if (file.open(QIODevice::ReadOnly)) {
-        QByteArray data = file.readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(data);
-        QJsonObject obj = doc.object();
-        QJsonArray favorites = obj["favorite"].toArray();
-        
-        for (const QJsonValue &value : favorites) {
-            QJsonObject book = value.toObject();
-            QString name = book["name"].toString();
-            QString desc = book["description"].toString();
-            QString url = book["url"].toString();
-            
-            selectionItem *item = new selectionItem(name, desc, this);
-            collectSetting->AddItem(item);
-            connect(item, &selectionItem::selected, this, [=](){
-                crawler->fetchArticle(QUrl(url));
-            });
-        }
+    for(const auto &item : favManager->favorites()){
+        selectionItem *sitem = new selectionItem(item.name, item.description, this);
+        collectSetting->AddItem(sitem);
+        collectSetting->SetSelection(sitem);
+        connect(sitem, &selectionItem::selected, this, [=](){
+            crawler->fetchArticle(QUrl(item.url));
+            view->prevButton->setVisible(true);
+            view->nextButton->setVisible(true);
+            settings->slideOut();
+        });
     }
-    file.close();
+
     connect(collectSetting, &singleSelectGroup::selectedItemChange, this, [=](int id){
         // g->ConvertType(id == 0 ? AbstractGraph::DG : AbstractGraph::UDG);
         // view->setType(id == 0 ? MyGraphicsView::DG : MyGraphicsView::UDG);
@@ -120,6 +141,7 @@ void MyCanvas::CreateSettings(int radius){
         connect(item, &selectionItem::selected, this, [=](selectionItem *item){
             player->setVoice(voice);
         });
+        dfsSetting->SetSelection(item);
     }
     QWidget *whiteSpace = new QWidget(this);
     whiteSpace->setFixedHeight(30);
@@ -148,12 +170,28 @@ void MyCanvas::CreateSettings(int radius){
     whiteSpace2->setFixedHeight(30);
     textButton *saveBtn = new textButton("收藏", this);
     connect(saveBtn, &textButton::myClicked, this, [=](){
-        QString savePath = QFileDialog::getSaveFileName(this, tr("Save map"), " ", tr("Map file(*.map)"));
-        if(!savePath.isEmpty())
-            SaveToFile(savePath);
+        if(!(g_links.FrontLink == g_links.CurrentLink)){
+            if(!favManager->addFavorite(g_links.CurrentLink)){
+                QMessageBox::warning(this, "错误", favManager->getLastError());
+            }else{
+                selectionItem *sitem = new selectionItem(g_links.CurrentLink.name, g_links.CurrentLink.description, this);
+                collectSetting->AddItem(sitem);
+                collectSetting->SetSelection(sitem);
+            }
+        }
     });
     textButton *delBtn = new textButton("取消收藏", "#0acb1b45","#1acb1b45","#2acb1b45",this);
-    connect(delBtn, &textButton::myClicked, this, [=](){emit setDel(this);});
+    connect(delBtn, &textButton::myClicked, this, [=](){
+        if(!(g_links.FrontLink == g_links.CurrentLink)){
+            if(!favManager->removeFavorite(g_links.CurrentLink.name)){
+                QMessageBox::warning(this, "错误", favManager->getLastError());
+            }else{
+                selectionItem *sitem = collectSetting->GetSelection(g_links.CurrentLink.name);
+                if(sitem != nullptr)
+                    collectSetting->RemoveItem(sitem);
+            }
+        }
+    });
     settings->AddContent(delBtn);
     settings->AddContent(saveBtn);
     settings->AddContent(whiteSpace2);
@@ -331,7 +369,8 @@ void MyCanvas::on_receiveMessage(const QString &message, const MessageType &type
                 QString users = message.right(message.length() - pos - 1);
                 QStringList list = users.split("|", Qt::SkipEmptyParts);
                 for(const QString &user : list){
-                    if(userMap.find(user) != userMap.end()) continue;
+                    QMutexLocker locker(&mutex);
+                    if(userMap.find(user) != userMap.end()) {locker.unlock(); continue;}
                     selectionItem *item = new selectionItem(user, "", this);
                     userList->AddItem(item);
                     connect(item, &selectionItem::selected, this, [=](selectionItem *item){
@@ -348,12 +387,14 @@ void MyCanvas::on_receiveMessage(const QString &message, const MessageType &type
                             defTextLayout->addWidget(currentMessageDisplay);
                         }
                     });
+                    locker.unlock();
                     userList->SetSelection(item);
                 }
             }else if(pos != -1 && message.left(pos) == "user_online")
             {
                 QString user = message.right(message.length() - pos - 1);
-                if(userMap.find(user) != userMap.end()) return;
+                QMutexLocker locker(&mutex);
+                if(userMap.find(user) != userMap.end()) {locker.unlock(); return;}
                 selectionItem *item = new selectionItem(user, "", this);
                 userList->AddItem(item);
                 connect(item, &selectionItem::selected, this, [=](selectionItem *item){
@@ -370,15 +411,17 @@ void MyCanvas::on_receiveMessage(const QString &message, const MessageType &type
                         defTextLayout->addWidget(currentMessageDisplay);
                     }
                 });
+                locker.unlock();
             }else if(pos != -1 && message.left(pos) == "user_offline")
             {
                 QString user = message.right(message.length() - pos - 1);
-                qDebug() << "user_offline" << user;
+                QMutexLocker locker(&mutex);
                 if(userMap.find(user) != userMap.end()){
                     userList->RemoveItem(userMap[user].selectItem);
                     userMap[user].messageDisplay->hide();
                     userMap.erase(user);
                 }
+                locker.unlock();
             }
         }
     }else if(type == MessageType::forward_msg){

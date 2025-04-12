@@ -34,7 +34,6 @@ public:
     std::vector<char> GenerateMessage(const MessageType& type, const uint32_t& instruction);
     SOCKET GetSocket() { return socket_fd; }
 
-    // 设置接收回调和启动监听线程
     void setReceiveCallback(std::function<void(const std::string&, MessageType)> callback);
     void startListening();
 
@@ -43,8 +42,8 @@ private:
     WSADATA wsaData;
     string ErrorMessage;
     mutex errorMutex;
-    std::thread m_listenThread;         // 使用 std::thread 存放监听线程
-    bool m_stopThread = false;          // 停止线程标志
+    std::thread m_listenThread;
+    bool m_stopThread = false;
     std::function<void(const std::string&, MessageType)> m_receiveCallback;
 };
 // TODO: 在此处引用程序需要的其他标头。
